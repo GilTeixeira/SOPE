@@ -10,12 +10,34 @@
 #define NUMMAXARGS 10
 #define NUMMAXARGSTRING 64
 
+void sigint_handler(int signo)
+{
+ char str1[10];
+ do {
+	 printf("Do you wat to leave? (y|n)\n");
+	 scanf("%s", str1);
+ } while(strcmp(str1, "y") != 0 && strcmp(str1, "n") != 0);
+ 
+ if(strcmp(str1, "y") == 0)
+ 	exit(6);
+}
+
 int main(int argc, char *argv[])
 {
  DIR *dirp;		//stream do diretorio (like fd)
  struct dirent *direntp; //estrutura de informações acerca de um ficheiro (tipo o link)
  struct stat stat_buf; //estrutura com mais informações acerca de um ficheiro (tipo os dados)
  pid_t pid;
+ 
+ //parao tratamento de sinais: ^C
+ struct sigaction action;
+ action.sa_handler = sigint_handler;
+ sigemptyset(&action.sa_mask);
+ action.sa_flags = 0;
+ if (sigaction(SIGINT,&action,NULL) < 0) {
+	 fprintf(stderr,"Unable to install SIGINT handler\n");
+	 exit(1);
+ }
  
  //variáveis que são postas pelo utilizador
  int setname = 0, setype = 0, setperm = 0, setprint = 0, setdelete = 0, setexec = 0;
