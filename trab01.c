@@ -24,13 +24,11 @@ int main(int argc, char *argv[])
  int type = -1;//type: f-0, d-1, l-2
  char ** execargs = (char**) malloc(10 * sizeof(char*));
  int i =0, indexofArg=-1;
- for(i=0; i < NUMMAXARGS; i++)
- {
-    execargs[i] = (char*) malloc(NUMMAXARGSTRING * sizeof(char)); //2 is for the letter and null terminator
+ for(i=0; i < NUMMAXARGS; i++){
+    execargs[i] = (char*) malloc(NUMMAXARGSTRING * sizeof(char));
  }
  
- if (argc < 2)
- {
+ if (argc < 2){
 	 fprintf( stderr, "Usage: %s dir_name [-name file_name] [-type f|d|l] [-perm permissions] [-print] (-delete | (-exec comand;))?\n", argv[0]);
 	 exit(1);
  }
@@ -95,14 +93,54 @@ int main(int argc, char *argv[])
  	exit(2);
  }
  
- printf("%-25s : %10s %10s\n", "Name", "premissions", "size");
+ //printf("%-25s : %10s %10s\n", "Name", "premissions", "size");
  
  //percorre o diretorio
  while ((direntp = readdir( dirp)) != NULL) //abre um determinado link do diretorio
  {
- if(stat(direntp->d_name, &stat_buf) == -1){ //abre o estrotura de dados do link
- 	perror("errou\n");
+ char newdir[128];
+ strcpy(newdir, argv[1]);
+ strcat(newdir, "/");
+ strcat(newdir, direntp->d_name);
+ 
+ if(stat(newdir, &stat_buf) == -1){ //abre o estrutura de dados do link
+ 	perror("errou");
+ 	printf("%s\n",argv[1]);
  	exit(1);
+ }
+ 
+ //vai para o subdiretorrio
+ if(S_ISDIR(stat_buf.st_mode) && strcmp(direntp->d_name,".") != 0 && strcmp(direntp->d_name,"..") != 0){
+ 	
+	char ** rArray = (char**) malloc(argc * sizeof(char*));
+	for(i=0; i < argc; i++){
+		if(i != 1)
+			rArray[i] = (char*) malloc(strlen(argv[i]) * sizeof(char));
+		else
+			rArray[i] = (char*) malloc(NUMMAXARGSTRING * sizeof(char));
+	}
+	
+	for(i=0; i < argc; i++){
+		if(i != 1)
+			strcpy(rArray[i],argv[i]);
+		else
+			strcpy(rArray[1], newdir);	
+	}
+	rArray[argc] = NULL;
+	
+	pid=fork();
+ 	if (pid == 0){//filho
+ 		char programe[NUMMAXARGSTRING];
+ 		char absolutepath[NUMMAXARGSTRING];
+ 		getcwd(absolutepath, NUMMAXARGSTRING);
+ 		strcpy(programe, absolutepath);
+ 		strcat(programe, "/");
+ 		strcat(programe, "trab01");
+ 		execv(programe, rArray);
+ 		perror("erro");
+ 		exit(4);
+ 	}
+ 	wait(NULL);
  }
  
  //ve o nome
@@ -134,20 +172,21 @@ int main(int argc, char *argv[])
  
  //faz o print
  if(setprint){
- 	printf("%-25s : %10s %10lu\n", direntp->d_name, permissionschar, stat_buf.st_size);
+ 	printf("%-35s : %10s %10lu\n", newdir, permissionschar, stat_buf.st_size);
  }
  
  //faz o delete
  if(setdelete){
- 	if(remove(direntp->d_name) == -1)
- 		printf("did not remove %s\n", direntp->d_name);
+ 	if(remove(newdir) == -1)
+ 		printf("did not remove %s\n", newdir);
  }
  
  //faz o exec
  if(setexec){
  	pid=fork();
  	if (pid == 0){ //filho
- 		strcpy(execargs[indexofArg], direntp->d_name);
+ 		if(indexofArg != -1)
+ 			strcpy(execargs[indexofArg], newdir);
  		execvp(execargs[0], execargs);
  		perror("erro");
  		exit(4);
